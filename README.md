@@ -1,161 +1,135 @@
-# React Hooks to npm boilerplate
+# use-sortable-data
 
-This repository is a boilerplate for creating custom React hooks and components that we can publish to NPM registry as packages.
+sort & search & book-mark functionality with React [Hooks](https://reactjs.org/docs/hooks-intro.html).
 
-I've put together a quick tutorial, it assumes an understanding of React, hooks and unit tests.
+<p>
+  <a target="_blank" href="https://www.npmjs.com/package/@spr021/use-sortable-data" title="NPM version"><img alt="npm" src="https://img.shields.io/npm/v/@spr021/use-sortable-data"></a>
+  <a target="_blank" href="http://makeapullrequest.com" title="PRs Welcome"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg"></a>
+</p>
 
-If something is not clear, message me or raise an issue, I will explain in more detail.
+## Installation
 
-I've used this boilerplate to create my NPM package [https://www.npmjs.com/package/@nekogd/react-utility-hooks].
-
-## First things first
-
-Firstly, clone this repository. 
-
-Next, go over to package.json file and amend name, description and author keys.
-
-The package would be served on npm as per what you have typed in the "name".
-
-You may want to use scoped naming i.e. "@myscope/use-my-hook"
-
-More info: [https://docs.npmjs.com/using-npm/scope.html]
-
-## How we will be able to use your package
-
-It follows the common React path.
-
-Follow through the included useCounter example and you will be fine.
-
-Make sure to export your hook (I prefer named exports) in index.ts.
-
-Basically you have to do three things:
-
-a) write your hook (preferably test and type it)
-
-b) export it in index.ts file
-
-c) deploy to NPM
-
-We will able to use your hook like so:
-
-```
- import { useYourHook } from 'your-package-name'
+npm
+```sh
+npm i @spr021/use-sortable-data
 ```
 
-## Development commands
-
-```
- // watch
- yarn start
-
- // or
- npm run start
+yarn
+```sh
+yarn add @spr021/use-sortable-data
 ```
 
-```
- // builds the dist folder
- yarn build
+## Usage
 
- // or
- npm run build
-```
+[![Edit use-sortable-data](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/usesortabledata-7irvg)
 
-```
- // starts tests
- yarn test
+```js
+import useSortableData from "@spr021/use-sortable-data";
+import Data from "data.json"
 
- // or
+function Table() {
+  const { items, requestSort, requestSearch, requestBookMark } = useSortableData(Data)
 
- npm run test
-```
+  return (
+    <>
+      <div>
+        <div>
+          <label>name</label>
+          <input 
+            onChange={(e) => requestSearch(e.target.name, e.target.value)} 
+            name="name"
+          />
+        </div>
+        <div>
+          <label>date</label>
+          <input 
+            onChange={(e) => requestSearch(e.target.name, e.target.value)}
+            name="date" 
+          />
+        </div>
+        <div>
+          <label>ad name</label>
+          <input 
+            onChange={(e) => requestSearch(e.target.name, e.target.value)}
+            name="title"
+          />
+        </div>
+        <div>
+          <label>field</label>
+          <select 
+            onChange={(e) => requestSearch(e.target.name, e.target.value)}
+            name="field"
+          >
+            <option value="title">title</option>
+            <option value="price">price</option>
+          </select>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <td onClick={() => requestSort('name')}>
+              name
+            </td>
+            <td onClick={() => requestSort('date')}>
+              date
+            </td>
+            <td onClick={() => requestSort('title')}>
+              ad name
+            </td>
+            <td onClick={() => requestSort('field')}>
+              field
+            </td>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item) => 
+            <tr onClick={() => requestBookMark(item.id)} key={item.id}>
+              <td>{item.name}</td>
+              <td>{item.date}</td>
+              <td>{item.title}</td>
+              <td>{item.field}</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </>
+  )
+}
 
-## Local testing and yarn link
-
-To locally test the package, do the following:
-
-Let's assume your package name is "use-my-counter" and your CRA is "my-app".
-
-Let's also assume they are in one workspace.
-
-```
-workspace
-  - use-my-counter
-  - my-app
-```
-
-a) in hook folder, run
-```
-yarn link
-```
-b) assuming you have a workspace, create a sample CRA app 
-```
-npx create-react-app my-app
-```
-c) navigate to your CRA app folder
-```
-cd my-app
-```
-d) run command
-```
- yarn link use-my-counter
-```
-e)  In your CRA app, you can now user package, as it's linked locally 
-```
-  import { useMyCounter } from 'use-my-counter';
-```
-
-f) However, this will give you an error due to different copy of React and in CRA app. 
-   To counter that let's assume that we have workspace
-```
-workspace
-  - use-my-counter
-  - my-app
-```
-  We navigate to use-my-counter and type (this will link the React versions locally). 
-  
-  Please amend the path to your needs.
-  ```
-   npm link ../my-app/node_modules/react
-  ```
-  We should be good to go to work locally. 
-
-## Deployment to NPM
-
-### Login to correct NPM account
-
-```
-npm login
-```
-
-### Versioning
-
-Increase the version number as per NPM guides [https://docs.npmjs.com/about-semantic-versioning].
-
-```
-// increases the first digit i.e. from 0.5.4 to 1.0.0
-npm version major
-
-// increases the second digit i.e. from 0.0.3 to 0.1.0
-npm version minor
-
-// increases the third digit i.e. from 0.0.1 to 0.0.2
-npm version patch
+export default Table
 ```
 
-### Deployment
+## API
 
-Run the command and the package should be up.
+### useSortableData
 
+```js
+  const [state, actions] = useSortableData(initialData)
 ```
-npm publish --access public
-```
 
-### What If I want to export a component? 
+#### state
 
-You can do that too, following same pattern as you'd with hooks.
+##### Type: `Array`
 
-Bear in mind you'd propably need .tsx file and not .ts.
+| Key     |  Type   | Description        |
+| ------- | :-----: | ------------------ |
+| items    | `Array` | the result Array.    |
 
-### Share with the world
+#### actions
 
-Share your work and learnings with the world! :)
+##### Type: `function`
+
+| Key     |    Type    | Description                                                                                |
+| ------- | :--------: | ------------------------------------------------------------------------------------------ |
+| requestSort     | `function` | Assign a new value to `items` sorted by `key` and `direction`.                                                           |
+| requestSearch   | `function` | Assign a new value to `items` searched by `search` and `value`.                    |
+| requestBookMark    | `function` | BookMark item and set it to of `items` array |
+
+## Related repo
+
+- [spr021/useSortableData](https://github.com/spr021/useSortableData)
+
+## License
+
+MIT © [spr021](https://github.com/spr021)
