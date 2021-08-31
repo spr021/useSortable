@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from "react"
 import PropTypes from 'prop-types';
 import { validateInitialValue } from '../../helpers/validateInitialValue';
 
-type IUseCounter = {
+type IUseSortableData = {
   items: Array<any>;
-  requestSort: (key: any, direction: any) => void;
-  requestSearch: (search: any, value: any) => void;
-  addToBookMark: (id: any) => void;
+  requestSort: (key: string | number, direction: string) => void;
+  requestSearch: (search: string | number, value: string | number) => void;
+  requestBookMark: (id: string | number) => void;
 };
 
 type Config = {
@@ -19,60 +19,84 @@ type Config = {
 
 
 /**
- * Classic counter example to help understand the flow of this npm package
+ * Classic sort & search example to help understand the flow of this npm package
  *
- * @param    {number} initialValue
- *           initial counter value
+ * @param    {Array} initialValue
+ *           initial sort & search value
+ * 
+ * @param    {Config} config
+ *           initial config for sort & search in initialValue
  *
- * @return   {Object}
- *           object with count and methods
+ * @return   {Array}
+ *           array with sort & search and methods
  *
- * @property {number} count
- *           The current count state
+ * @property {Array} items
+ *           The current array that sort & search
  *
- * @property {()=>void} increment
- *           the increment function
+ * @property {(key: string | number, direction: string) => void} requestSort
+ *           the request for Sort function that get what Key you want to sort and direction 
+ *           direction can be "ascending" or "descending"
+ *           defult value of direction is "ascending"
  *
- * @property {()=>void} decrement
- *           the decrement function
+ * @property {(search: string | number, value: string | number) => void} requestSearch
+ *           the request for Search function that get Search for what Key you want search and value 
  *
- * @property {()=>void} reset
- *           the reset function
+ * @property {(id: string | number) => void} requestBookMark
+ *           the request for BookMark function that get what Id you want to book mark and set top of you array
  *
  * @example
  *   const ExampleComponent = () => {
- *     const { count, increment, reset, decrement } = useCounter();
+ *     const myArray = [{
+ *        id: 1,
+ *        name: "Saber",
+ *        family: "Pourrahimi"
+ *        ...
+ *     },
+ *     {
+ *        id: 2,
+ *        name: "Maryam",
+ *        family: "Mirzayee"
+ *        ...
+ *     }]
+ *     const { items, requestSort, requestSearch, requestBookMark } = useSortableData(myArray);
  *
  *     return (
  *       <>
- *         <button onClick={increment}>Increment counter</button>
- *         <button onClick={reset}>Reset counter</button>
- *         <button onClick={decrement}>Decrement counter</button>
- *         <p>{count}</p>
+ *         <table>
+ *           <tr>
+ *             <td>Id</td>
+ *             <td>Name</td>
+ *             <td>Family</td>
+ *           </tr>
+ *           {items.map(el => (
+ *              <tr onClick={() => requestBookMark(el.id)}>
+ *                <td>{el.id}</td>
+ *                <td>{el.name}</td>
+ *                <td>{el.family}</td>
+ *              </tr>
+ *           ))}
+ *         </table>
+ *         <button onClick={() => requestSort("name", "ascending")}>Sort ascending myArray by name</button>
+ *         <input onChange={(e) => requestSearch("name", e.target.value)}>Search name in myArray</button>
+ *         <input onChange={(e) => requestSearch("family", e.target.value)}>Search family in myArray</button>
  *       </>
  *      )
  *    }
  */
+export const useSortableData = (items: Array<any>, config: Config = {
+  bookMarks: [],
+  key: "",
+  direction: "",
+  search: "",
+  value: "",
+}) : IUseSortableData => {
+  const validatedInitialValue = validateInitialValue(items);
 
- export const useCounter = (initialValue: number = 0): IUseCounter => {
-  const validatedInitialValue = validateInitialValue(initialValue);
-
-  const [count, setCount] = useState<number>(validatedInitialValue);
-  const increment = useCallback(() => setCount((value) => value + 1), []);
-  const decrement = useCallback(() => setCount((value) => value - 1), []);
-  const reset = useCallback(() => setCount(validatedInitialValue), [
-    validatedInitialValue,
-  ]);
-  return { count, increment, decrement, reset };
-};
-
-export const useSortableData = (items: Array<any>, config: Config) : IUseCounter => {
   const [sortConfig, setSortConfig] = useState<Config>(config)
   const bookMarkList = JSON.parse(window.localStorage.getItem("book-mark") || "[]")
   
   const sortedItems = useMemo(() => {
-    let sortableItems = [...items]
-    // sort by table head
+    let sortableItems = [...validatedInitialValue]
     if (sortConfig !== null && sortConfig.key !== null) {
       sortableItems
       .sort((a, b) => {
@@ -85,7 +109,6 @@ export const useSortableData = (items: Array<any>, config: Config) : IUseCounter
         return 0
       })
     }
-    // search by value
     if (sortConfig !== null && sortConfig.search && sortConfig.value) {
       sortableItems = sortableItems
       .filter(item => {
@@ -104,7 +127,6 @@ export const useSortableData = (items: Array<any>, config: Config) : IUseCounter
         }
       })
     }
-    // move book marks to up
     if (sortConfig.bookMarks) {
       sortConfig.bookMarks.forEach(bookMark => {
         sortableItems.sort((x,y) => { return x.id === bookMark ? -1 : y.id === bookMark ? 1 : 0 })
@@ -113,32 +135,32 @@ export const useSortableData = (items: Array<any>, config: Config) : IUseCounter
     return sortableItems
   }, [items, sortConfig])
   
-  const requestSort = (key: any, direction: any) => {
+  const requestSort = (key: string | number, direction: string) => {
     direction = direction || "ascending"
     if (sortConfig && sortConfig.key === key && sortConfig.direction === "ascending") {
       direction = "descending"
     }
     const params = new URLSearchParams(window.location.search)
-    params.set("sort", key)
+    params.set("sort", key.toString())
     params.set("d", direction)
     const URL = params.toString().indexOf("null") > 0 ? `${window.location.pathname}` : `${window.location.pathname}?${params.toString()}`
     window.history.replaceState({}, "", URL)
-    setSortConfig({...sortConfig, key, direction })
+    setSortConfig({...sortConfig, key: key.toString(), direction })
   }
 
-  const requestSearch = (search: any, value: any) => {
-    setSortConfig({...sortConfig, search, value })
+  const requestSearch = (search: string | number, value: string | number) => {
+    setSortConfig({...sortConfig, search: search.toString(), value: value.toString() })
   }
 
-  const addToBookMark = (id: any) => {
+  const requestBookMark = (id: string | number) => {
     if([...sortConfig.bookMarks].includes(id)) {  
-      setSortConfig({...sortConfig, bookMarks: [...sortConfig.bookMarks.filter(el => el !== id)]})
-      ////
-      window.localStorage.setItem("book-mark", JSON.stringify([...sortConfig.bookMarks.filter(el => el !== id)]))
+      const removedItem = [...sortConfig.bookMarks.filter(el => el !== id)]
+      setSortConfig({...sortConfig, bookMarks: removedItem})
+      window.localStorage.setItem("book-mark", JSON.stringify(removedItem))
     } else {
-      setSortConfig({...sortConfig, bookMarks: [...sortConfig.bookMarks, id]})
-      /////
-      window.localStorage.setItem("book-mark", JSON.stringify([...sortConfig.bookMarks, id]))
+      const addItem = [...sortConfig.bookMarks, id]
+      setSortConfig({...sortConfig, bookMarks: addItem})
+      window.localStorage.setItem("book-mark", JSON.stringify(addItem))
     } 
   }
 
@@ -151,7 +173,7 @@ export const useSortableData = (items: Array<any>, config: Config) : IUseCounter
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[])
 
-  return { items: sortedItems, requestSort, requestSearch, addToBookMark }
+  return { items: sortedItems, requestSort, requestSearch, requestBookMark }
 }
 
 useSortableData.PropTypes = {
@@ -160,8 +182,10 @@ useSortableData.PropTypes = {
 
 useSortableData.defaultProps = {
   config: {
-    bookMarks: []
+    bookMarks: [],
+    key: "",
+    direction: "",
+    search: "",
+    value: "",
   },
 };
-
-// https://igorluczko.medium.com/the-complete-guide-to-publish-react-hook-as-npm-package-880049829e89

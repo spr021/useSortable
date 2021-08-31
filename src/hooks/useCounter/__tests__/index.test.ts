@@ -1,50 +1,53 @@
 import { renderHook, act } from '@testing-library/react-hooks';
-import { useCounter } from '../index';
+import { useSortableData } from '../index';
 
-describe('useCounter tests', () => {
+describe('useSortableData tests', () => {
+
+  const myArray = [{
+    id: 1,
+    name: "Borna",
+    family: "Pourrahimi"
+ },
+ {
+    id: 2,
+    name: "Ali",
+    family: "Mirzayee"
+ }]
+
   it('should be defined', () => {
-    expect(useCounter).toBeDefined();
+    expect(useSortableData).toBeDefined();
   });
 
   it('renders the hook correctly and checks types', () => {
-    const { result } = renderHook(() => useCounter());
-    expect(result.current.count).toBe(0);
-    expect(typeof result.current.count).toBe('number');
-    expect(typeof result.current.increment).toBe('function');
+    const { result } = renderHook(() => useSortableData([]));
+    expect(result.current.items).toStrictEqual([]);
+    expect(Array.isArray(result.current.items)).toBe(true);
+    expect(typeof result.current.requestSort).toBe('function');
+    expect(typeof result.current.requestSearch).toBe('function');
+    expect(typeof result.current.requestBookMark).toBe('function');
   });
 
-  it('should increment counter', () => {
-    const { result } = renderHook(() => useCounter());
+  it('should requestSort ascending by name from custom initial value', () => {
+    const { result } = renderHook(() => useSortableData(myArray));
     act(() => {
-      result.current.increment();
+      result.current.requestSort("name", "ascending");
     });
-    expect(result.current.count).toBe(1);
+    expect(result.current.items[0].name).toBe("Ali");
   });
 
-  it('should increment counter from custom initial value', () => {
-    const { result } = renderHook(() => useCounter(10));
+  it('should requestSearch family by "Mi" value from custom initial value', () => {
+    const { result } = renderHook(() => useSortableData(myArray));
     act(() => {
-      result.current.increment();
+      result.current.requestSearch("family", "Mi");
     });
-    expect(result.current.count).toBe(11);
+    expect(result.current.items).toStrictEqual([myArray[1], myArray[0]]);
   });
 
-  it('should decrement counter from custom initial value', () => {
-    const { result } = renderHook(() => useCounter(20));
+  it('should requestBookMark item from custom initial value', () => {
+    const { result } = renderHook(() => useSortableData(myArray));
     act(() => {
-      result.current.decrement();
+      result.current.requestBookMark(2);
     });
-    expect(result.current.count).toBe(19);
-  });
-
-  it('should reset counter to updated initial value', () => {
-    let initialValue = 0;
-    const { result, rerender } = renderHook(() => useCounter(initialValue));
-    initialValue = 10;
-    rerender();
-    act(() => {
-      result.current.reset();
-    });
-    expect(result.current.count).toBe(10);
+    expect(result.current.items).toStrictEqual([myArray[1], myArray[0]]);
   });
 });

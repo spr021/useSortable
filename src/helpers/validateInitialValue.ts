@@ -1,30 +1,30 @@
 /**
  * The validator function returns
- * - input number for number or strings that can be parsed to a number
- * - 0 for other
+ * - input array for array or object that can be change to a array
+ * - [] for other
  *
  * @param {any} initialValue
  *              Value to be validated
  *
- * @return {number}
- *         input number or 0 for wrong input
+ * @return {Array}
+ *         input array or [] for wrong input
  *
  * @example
  *        const validatedInitialValue = validateInitialValue(initialValue);
  */
-export const validateInitialValue = (initialValue: any) => {
-  if (typeof initialValue === 'string') {
+export const validateInitialValue = (initialValue: any): Array<any> => {
+  if (typeof initialValue === 'object' && initialValue !== null && !Array.isArray(initialValue)) {
     console.log(
-      'you have passed a string when a number is required. It still may work however. Please pass a number.',
+      'you have passed a object when a array is required. It still may work however. Please pass a array.',
     );
-    initialValue = parseInt(initialValue, 10);
+    initialValue = [...initialValue]
+  }
+  if (!Array.isArray(initialValue)) {
+    console.log(
+      'you really want to break the validation. Please pass a array as parameter. Defaulting to [].',
+    )
+    initialValue = []
   }
 
-  if (isNaN(initialValue)) {
-    console.log(
-      'you really want to break the validation. Please pass a number as parameter. Defaulting to zero.',
-    );
-    initialValue = 0;
-  }
   return initialValue;
 };

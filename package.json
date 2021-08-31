@@ -1,10 +1,10 @@
 {
-  "name": "@nekogd/react-hook-npm-publish-boilerplate",
-  "version": "0.0.0",
+  "name": "@spr021/use-sortable-data",
+  "version": "1.0",
   "description": "Modular utility hooks that we often use grouped in one package. Written in TypeScript, documented, tested and maintained.Disclaimer: at least React 16 is needed (the one with hooks ;) )",
-  "author": "nekogd",
+  "author": "spr021",
   "license": "Apache-2.0",
-  "repository": "nekogd/react-hook-npm-publish-boilerplate",
+  "repository": "spr021/useSortableData",
   "main": "dist/index.js",
   "engines": {
     "node": ">=8",
