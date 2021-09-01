@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react-hooks';
-import { useSortableData } from '../index';
+import { useSortable } from '../index';
 
-describe('useSortableData tests', () => {
+describe('useSortable tests', () => {
 
   const myArray = [{
     id: 1,
@@ -15,11 +15,11 @@ describe('useSortableData tests', () => {
  }]
 
   it('should be defined', () => {
-    expect(useSortableData).toBeDefined();
+    expect(useSortable).toBeDefined();
   });
 
   it('renders the hook correctly and checks types', () => {
-    const { result } = renderHook(() => useSortableData([]));
+    const { result } = renderHook(() => useSortable([]));
     expect(result.current.items).toStrictEqual([]);
     expect(Array.isArray(result.current.items)).toBe(true);
     expect(typeof result.current.requestSort).toBe('function');
@@ -28,7 +28,7 @@ describe('useSortableData tests', () => {
   });
 
   it('should requestSort ascending by name from custom initial value', () => {
-    const { result } = renderHook(() => useSortableData(myArray));
+    const { result } = renderHook(() => useSortable(myArray));
     act(() => {
       result.current.requestSort("name", "ascending");
     });
@@ -36,7 +36,7 @@ describe('useSortableData tests', () => {
   });
 
   it('should requestSearch family by "Mi" value from custom initial value', () => {
-    const { result } = renderHook(() => useSortableData(myArray));
+    const { result } = renderHook(() => useSortable(myArray));
     act(() => {
       result.current.requestSearch("family", "Mi");
     });
@@ -44,7 +44,7 @@ describe('useSortableData tests', () => {
   });
 
   it('should requestBookMark item from custom initial value', () => {
-    const { result } = renderHook(() => useSortableData(myArray));
+    const { result } = renderHook(() => useSortable(myArray));
     act(() => {
       result.current.requestBookMark(2);
     });

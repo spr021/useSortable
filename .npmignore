@@ -3,5 +3,9 @@ dist
 .storybook
 .gitignore
 .prettierrc
+.npmignore
+yarn.lock
+src/hooks/useSortable/__tests__/index.test.ts
+.eslintrc.json
 rollup.config.js
 tsconfig.json

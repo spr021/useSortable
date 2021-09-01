@@ -1,9 +1,9 @@
-# use-sortable-data
+# use-sortable
 
 sort & search & book-mark functionality with React [Hooks](https://reactjs.org/docs/hooks-intro.html).
 
 <p>
-  <a target="_blank" href="https://www.npmjs.com/package/@spr021/use-sortable-data" title="NPM version"><img alt="npm" src="https://img.shields.io/npm/v/@spr021/use-sortable-data"></a>
+  <a target="_blank" href="https://www.npmjs.com/package/use-sortable" title="NPM version"><img alt="npm" src="https://img.shields.io/npm/v/use-sortable"></a>
   <a target="_blank" href="http://makeapullrequest.com" title="PRs Welcome"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg"></a>
 </p>
 
@@ -11,24 +11,24 @@ sort & search & book-mark functionality with React [Hooks](https://reactjs.org/d
 
 npm
 ```sh
-npm i @spr021/use-sortable-data
+npm i use-sortable
 ```
 
 yarn
 ```sh
-yarn add @spr021/use-sortable-data
+yarn add use-sortable
 ```
 
 ## Usage
 
-[![Edit use-sortable-data](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/usesortabledata-7irvg)
+[![Edit use-sortable](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/usesortable-7irvg)
 
 ```js
-import useSortableData from "@spr021/use-sortable-data";
+import useSortable from "use-sortable";
 import Data from "data.json"
 
 function Table() {
-  const { items, requestSort, requestSearch, requestBookMark } = useSortableData(Data)
+  const { items, requestSort, requestSearch, requestBookMark } = useSortable(Data)
 
   return (
     <>
@@ -102,10 +102,10 @@ export default Table
 
 ## API
 
-### useSortableData
+### useSortable
 
 ```js
-  const [state, actions] = useSortableData(initialData)
+  const [state, actions] = useSortable(initialData)
 ```
 
 #### state
@@ -128,7 +128,7 @@ export default Table
 
 ## Related repo
 
-- [spr021/useSortableData](https://github.com/spr021/useSortableData)
+- [spr021/useSortable](https://github.com/spr021/useSortable)
 
 ## License
 

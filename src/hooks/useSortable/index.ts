@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import PropTypes from 'prop-types';
 import { validateInitialValue } from '../../helpers/validateInitialValue';
 
-type IUseSortableData = {
+type IUseSortable = {
   items: Array<any>;
   requestSort: (key: string | number, direction: string) => void;
   requestSearch: (search: string | number, value: string | number) => void;
@@ -58,7 +58,7 @@ type Config = {
  *        family: "Mirzayee"
  *        ...
  *     }]
- *     const { items, requestSort, requestSearch, requestBookMark } = useSortableData(myArray);
+ *     const { items, requestSort, requestSearch, requestBookMark } = useSortable(myArray);
  *
  *     return (
  *       <>
@@ -83,13 +83,13 @@ type Config = {
  *      )
  *    }
  */
-export const useSortableData = (items: Array<any>, config: Config = {
+const useSortable = (items: Array<any>, config: Config = {
   bookMarks: [],
   key: "",
   direction: "",
   search: "",
   value: "",
-}) : IUseSortableData => {
+}) : IUseSortable => {
   const validatedInitialValue = validateInitialValue(items);
 
   const [sortConfig, setSortConfig] = useState<Config>(config)
@@ -145,11 +145,11 @@ export const useSortableData = (items: Array<any>, config: Config = {
     params.set("d", direction)
     const URL = params.toString().indexOf("null") > 0 ? `${window.location.pathname}` : `${window.location.pathname}?${params.toString()}`
     window.history.replaceState({}, "", URL)
-    setSortConfig({...sortConfig, key: key.toString(), direction })
+    setSortConfig({...sortConfig, key: key.toString() && key.toString(), direction })
   }
 
   const requestSearch = (search: string | number, value: string | number) => {
-    setSortConfig({...sortConfig, search: search.toString(), value: value.toString() })
+    setSortConfig({...sortConfig, search: search.toString() && search.toString(), value: value.toString() && value.toString() })
   }
 
   const requestBookMark = (id: string | number) => {
@@ -176,11 +176,11 @@ export const useSortableData = (items: Array<any>, config: Config = {
   return { items: sortedItems, requestSort, requestSearch, requestBookMark }
 }
 
-useSortableData.PropTypes = {
+useSortable.PropTypes = {
   items: PropTypes.array.isRequired,
 };
 
-useSortableData.defaultProps = {
+useSortable.defaultProps = {
   config: {
     bookMarks: [],
     key: "",
@@ -189,3 +189,7 @@ useSortableData.defaultProps = {
     value: "",
   },
 };
+
+module.exports = useSortable;
+
+module.exports.default = useSortable;
