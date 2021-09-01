@@ -135,7 +135,7 @@ const useSortable = (items: Array<any>, config: Config = {
     return sortableItems
   }, [items, sortConfig])
   
-  const requestSort = (key: string | number, direction: string) => {
+  const requestSort = (key: string, direction: string) => {
     direction = direction || "ascending"
     if (sortConfig && sortConfig.key === key && sortConfig.direction === "ascending") {
       direction = "descending"
@@ -148,8 +148,8 @@ const useSortable = (items: Array<any>, config: Config = {
     setSortConfig({...sortConfig, key: key.toString() && key.toString(), direction })
   }
 
-  const requestSearch = (search: string | number, value: string | number) => {
-    setSortConfig({...sortConfig, search: search.toString() && search.toString(), value: value.toString() && value.toString() })
+  const requestSearch = (search: string, value: string) => {
+    setSortConfig({...sortConfig, search: search && search.toString(), value: value && value.toString() })
   }
 
   const requestBookMark = (id: string | number) => {
