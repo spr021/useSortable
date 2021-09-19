@@ -83,7 +83,7 @@ type Config = {
  *      )
  *    }
  */
-const useSortable = (items: Array<any>, config: Config = {
+export const useSortable = (items: Array<any>, config: Config = {
   bookMarks: [],
   key: "",
   direction: "",
