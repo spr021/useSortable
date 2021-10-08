@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
-import PropTypes from 'prop-types';
 import { validateInitialValue } from '../../helpers/validateInitialValue';
 
 type IUseSortable = {
   items: Array<any>;
-  requestSort: (key: string | number, direction: string) => void;
-  requestSearch: (search: string | number, value: string | number) => void;
+  requestSort: (key: string, direction: string) => void;
+  requestSearch: (search: string, value: string) => void;
   requestBookMark: (id: string | number) => void;
 };
 
@@ -175,10 +174,6 @@ export const useSortable = (items: Array<any>, config: Config = {
 
   return { items: sortedItems, requestSort, requestSearch, requestBookMark }
 }
-
-useSortable.PropTypes = {
-  items: PropTypes.array.isRequired,
-};
 
 useSortable.defaultProps = {
   config: {
