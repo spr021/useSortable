@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from "react"
 import { validateInitialValue } from '../../helpers/validateInitialValue';
 
 type IUseSortable = {
@@ -16,12 +16,13 @@ type Config = {
   value: string;
 };
 
+
 /**
  * Classic sort & search example to help understand the flow of this npm package
  *
  * @param    {Array} initialValue
  *           initial sort & search value
- *
+ * 
  * @param    {Config} config
  *           initial config for sort & search in initialValue
  *
@@ -32,12 +33,12 @@ type Config = {
  *           The current array that sort & search
  *
  * @property {(key: string | number, direction: string) => void} requestSort
- *           the request for Sort function that get what Key you want to sort and direction
+ *           the request for Sort function that get what Key you want to sort and direction 
  *           direction can be "ascending" or "descending"
  *           defult value of direction is "ascending"
  *
  * @property {(search: string | number, value: string | number) => void} requestSearch
- *           the request for Search function that get Search for what Key you want search and value
+ *           the request for Search function that get Search for what Key you want search and value 
  *
  * @property {(id: string | number) => void} requestBookMark
  *           the request for BookMark function that get what Id you want to book mark and set top of you array
@@ -81,143 +82,106 @@ type Config = {
  *      )
  *    }
  */
-export const useSortable = (
-  items: Array<any>,
-  config: Config = {
-    bookMarks: [],
-    key: '',
-    direction: '',
-    search: '',
-    value: '',
-  },
-): IUseSortable => {
+export const useSortable = (items: Array<any>, config: Config = {
+  bookMarks: [],
+  key: "",
+  direction: "",
+  search: "",
+  value: "",
+}) : IUseSortable => {
   const validatedInitialValue = validateInitialValue(items);
 
-  const [sortConfig, setSortConfig] = useState<Config>(config);
-  const bookMarkList = JSON.parse(window.localStorage.getItem('book-mark') || '[]');
-
+  const [sortConfig, setSortConfig] = useState<Config>(config)
+  const bookMarkList = JSON.parse(window.localStorage.getItem("book-mark") || "[]")
+  
   const sortedItems = useMemo(() => {
-    let sortableItems = [...validatedInitialValue];
+    let sortableItems = [...validatedInitialValue]
     if (sortConfig !== null && sortConfig.key !== null) {
-      sortableItems.sort((a, b) => {
+      sortableItems
+      .sort((a, b) => {
         if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
+          return sortConfig.direction === "ascending" ? -1 : 1
         }
         if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
+          return sortConfig.direction === "ascending" ? 1 : -1
         }
-        return 0;
-      });
+        return 0
+      })
     }
     if (sortConfig !== null && sortConfig.search && sortConfig.value) {
       sortableItems = sortableItems
-        .filter((item) => {
-          return item[sortConfig.search]
-            .toLowerCase()
-            .includes(sortConfig.value.toLowerCase());
-        })
-        .sort((a, b) => {
-          if (
-            a[sortConfig.search]
-              .toLowerCase()
-              .indexOf(sortConfig.value.toLowerCase()) >
-            b[sortConfig.search]
-              .toLowerCase()
-              .indexOf(sortConfig.value.toLowerCase())
-          ) {
-            return 1;
-          } else if (
-            a[sortConfig.search]
-              .toLowerCase()
-              .indexOf(sortConfig.value.toLowerCase()) <
-            b[sortConfig.search]
-              .toLowerCase()
-              .indexOf(sortConfig.value.toLowerCase())
-          ) {
-            return -1;
-          } else {
-            if (a[sortConfig.search] > b[sortConfig.search]) return 1;
-            else return -1;
-          }
-        });
+      .filter(item => {
+        return item[sortConfig.search].toLowerCase().includes(sortConfig.value.toLowerCase())
+      })
+      .sort((a, b) => {
+        if(a[sortConfig.search].toLowerCase().indexOf(sortConfig.value.toLowerCase()) > b[sortConfig.search].toLowerCase().indexOf(sortConfig.value.toLowerCase())) {
+          return 1
+        } else if (a[sortConfig.search].toLowerCase().indexOf(sortConfig.value.toLowerCase()) < b[sortConfig.search].toLowerCase().indexOf(sortConfig.value.toLowerCase())) {
+            return -1
+        } else {
+            if(a[sortConfig.search] > b[sortConfig.search])
+              return 1
+            else
+              return -1
+        }
+      })
     }
     if (sortConfig.bookMarks) {
-      sortConfig.bookMarks.forEach((bookMark) => {
-        sortableItems.sort((x, y) => {
-          return x.id === bookMark ? -1 : y.id === bookMark ? 1 : 0;
-        });
-      });
+      sortConfig.bookMarks.forEach(bookMark => {
+        sortableItems.sort((x,y) => { return x.id === bookMark ? -1 : y.id === bookMark ? 1 : 0 })
+      })
     }
-    return sortableItems;
-  }, [items, sortConfig]);
-
+    return sortableItems
+  }, [items, sortConfig])
+  
   const requestSort = (key: string, direction: string) => {
-    if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === 'ascending'
-    ) {
-      direction = 'descending';
-    } else if (!direction) {
-      direction = 'ascending';
+    direction = direction || "ascending"
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === "ascending") {
+      direction = "descending"
     }
-    const params = new URLSearchParams(window.location.search);
-    params.set('sort', key.toString());
-    params.set('d', direction);
-    const URL =
-      params.toString().indexOf('null') > 0
-        ? `${window.location.pathname}`
-        : `${window.location.pathname}?${params.toString()}`;
-    window.history.replaceState({}, '', URL);
-    setSortConfig({
-      ...sortConfig,
-      key: key.toString() && key.toString(),
-      direction,
-    });
-  };
+    const params = new URLSearchParams(window.location.search)
+    params.set("sort", key.toString())
+    params.set("d", direction)
+    const URL = params.toString().indexOf("null") > 0 ? `${window.location.pathname}` : `${window.location.pathname}?${params.toString()}`
+    window.history.replaceState({}, "", URL)
+    setSortConfig({...sortConfig, key: key.toString() && key.toString(), direction })
+  }
 
   const requestSearch = (search: string, value: string) => {
-    setSortConfig({
-      ...sortConfig,
-      search: search && search.toString(),
-      value: value && value.toString(),
-    });
-  };
+    setSortConfig({...sortConfig, search: search && search.toString(), value: value && value.toString() })
+  }
 
   const requestBookMark = (id: string | number) => {
-    const bookMarks = sortConfig.bookMarks;
-    const updatedBookMarks = [
-      ...bookMarks.filter((el) => el !== id), // Only add element if it doesn't already exist
-      ...(!bookMarks.includes(id) ? [id] : []), // Spread in id only if it doesn't already exist
-    ];
-    setSortConfig({ ...sortConfig, bookMarks: updatedBookMarks });
-    window.localStorage.setItem('book-mark', JSON.stringify(updatedBookMarks));
-  };
+    if([...sortConfig.bookMarks].includes(id)) {  
+      const removedItem = [...sortConfig.bookMarks.filter(el => el !== id)]
+      setSortConfig({...sortConfig, bookMarks: removedItem})
+      window.localStorage.setItem("book-mark", JSON.stringify(removedItem))
+    } else {
+      const addItem = [...sortConfig.bookMarks, id]
+      setSortConfig({...sortConfig, bookMarks: addItem})
+      window.localStorage.setItem("book-mark", JSON.stringify(addItem))
+    } 
+  }
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const URLsort = params.get('sort') || '';
-    const URLd = params.get('d') || '';
-    requestSort(URLsort, URLd);
-    setSortConfig({
-      ...sortConfig,
-      key: URLsort,
-      direction: URLd,
-      bookMarks: bookMarkList,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const params = new URLSearchParams(window.location.search)
+    const URLsort = params.get('sort') || ""
+    const URLd = params.get('d') || ""
+    requestSort(URLsort, URLd)
+    setSortConfig({...sortConfig, key: URLsort, direction: URLd, bookMarks: bookMarkList})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[])
 
-  return { items: sortedItems, requestSort, requestSearch, requestBookMark };
-};
+  return { items: sortedItems, requestSort, requestSearch, requestBookMark }
+}
 
 useSortable.defaultProps = {
   config: {
     bookMarks: [],
-    key: '',
-    direction: '',
-    search: '',
-    value: '',
+    key: "",
+    direction: "",
+    search: "",
+    value: "",
   },
 };
 
