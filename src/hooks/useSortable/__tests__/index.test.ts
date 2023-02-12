@@ -2,17 +2,18 @@ import { renderHook, act } from '@testing-library/react-hooks';
 import { useSortable } from '../index';
 
 describe('useSortable tests', () => {
-
-  const myArray = [{
-    id: 1,
-    name: "Borna",
-    family: "Pourrahimi"
- },
- {
-    id: 2,
-    name: "Ali",
-    family: "Mirzayee"
- }]
+  const myArray = [
+    {
+      id: 1,
+      name: 'Borna',
+      family: 'Pourrahimi',
+    },
+    {
+      id: 2,
+      name: 'Ali',
+      family: 'Mirzayee',
+    },
+  ];
 
   it('should be defined', () => {
     expect(useSortable).toBeDefined();
@@ -30,15 +31,15 @@ describe('useSortable tests', () => {
   it('should requestSort ascending by name from custom initial value', () => {
     const { result } = renderHook(() => useSortable(myArray));
     act(() => {
-      result.current.requestSort("name", "ascending");
+      result.current.requestSort('name', 'ascending');
     });
-    expect(result.current.items[0].name).toBe("Ali");
+    expect(result.current.items[0].name).toBe('Ali');
   });
 
   it('should requestSearch family by "Mi" value from custom initial value', () => {
     const { result } = renderHook(() => useSortable(myArray));
     act(() => {
-      result.current.requestSearch("family", "Mi");
+      result.current.requestSearch('family', 'Mi');
     });
     expect(result.current.items).toStrictEqual([myArray[1], myArray[0]]);
   });
