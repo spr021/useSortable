@@ -110,60 +110,51 @@ export const useSortable = (
       });
     }
     if (sortConfig !== null && sortConfig.search && sortConfig.value) {
+      const searchValue = sortConfig.value.toLowerCase();
       sortableItems = sortableItems
         .filter((item) => {
-          return item[sortConfig.search]
-            .toLowerCase()
-            .includes(sortConfig.value.toLowerCase());
+          const field = item[sortConfig.search];
+          if (field === undefined || field === null) return false;
+          return String(field).toLowerCase().includes(searchValue);
         })
         .sort((a, b) => {
-          if (
-            a[sortConfig.search]
-              .toLowerCase()
-              .indexOf(sortConfig.value.toLowerCase()) >
-            b[sortConfig.search]
-              .toLowerCase()
-              .indexOf(sortConfig.value.toLowerCase())
-          ) {
-            return 1;
-          } else if (
-            a[sortConfig.search]
-              .toLowerCase()
-              .indexOf(sortConfig.value.toLowerCase()) <
-            b[sortConfig.search]
-              .toLowerCase()
-              .indexOf(sortConfig.value.toLowerCase())
-          ) {
-            return -1;
-          } else {
-            if (a[sortConfig.search] > b[sortConfig.search]) return 1;
-            else return -1;
-          }
+          const aField = String(a[sortConfig.search]).toLowerCase();
+          const bField = String(b[sortConfig.search]).toLowerCase();
+          const aIndex = aField.indexOf(searchValue);
+          const bIndex = bField.indexOf(searchValue);
+          if (aIndex > bIndex) return 1;
+          if (aIndex < bIndex) return -1;
+          if (aField > bField) return 1;
+          return -1;
         });
     }
-    if (sortConfig.bookMarks) {
-      sortConfig.bookMarks.forEach((bookMark) => {
-        sortableItems.sort((x, y) => {
-          return x.id === bookMark ? -1 : y.id === bookMark ? 1 : 0;
-        });
+    if (sortConfig.bookMarks && sortConfig.bookMarks.length) {
+      const uniqueBookMarks = Array.from(new Set(sortConfig.bookMarks));
+      sortableItems.sort((x, y) => {
+        const xIndex = uniqueBookMarks.indexOf(x.id);
+        const yIndex = uniqueBookMarks.indexOf(y.id);
+        if (xIndex === -1 && yIndex === -1) return 0;
+        if (xIndex === -1) return 1;
+        if (yIndex === -1) return -1;
+        return xIndex - yIndex;
       });
     }
     return sortableItems;
   }, [items, sortConfig]);
 
-  const requestSort = (key: string, direction: string) => {
-    if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === 'ascending'
-    ) {
-      direction = 'descending';
-    } else if (!direction) {
-      direction = 'ascending';
+  const requestSort = (key: string, direction?: string) => {
+    let newDirection = direction;
+    if (!newDirection) {
+      if (sortConfig && sortConfig.key === key) {
+        newDirection =
+          sortConfig.direction === 'ascending' ? 'descending' : 'ascending';
+      } else {
+        newDirection = sortConfig.direction || 'ascending';
+      }
     }
     const params = new URLSearchParams(window.location.search);
     params.set('sort', key.toString());
-    params.set('d', direction);
+    params.set('d', newDirection);
     const URL =
       params.toString().indexOf('null') > 0
         ? `${window.location.pathname}`
@@ -172,7 +163,7 @@ export const useSortable = (
     setSortConfig({
       ...sortConfig,
       key: key.toString() && key.toString(),
-      direction,
+      direction: newDirection,
     });
   };
 
@@ -185,13 +176,11 @@ export const useSortable = (
   };
 
   const requestBookMark = (id: string | number) => {
-    const bookMarks = sortConfig.bookMarks;
-    const updatedBookMarks = [
-      ...bookMarks.filter((el) => el !== id), // Only add element if it doesn't already exist
-      ...(!bookMarks.includes(id) ? [id] : []), // Spread in id only if it doesn't already exist
-    ];
-    setSortConfig({ ...sortConfig, bookMarks: updatedBookMarks });
-    window.localStorage.setItem('book-mark', JSON.stringify(updatedBookMarks));
+    setSortConfig((prev) => {
+      const bookMarks = Array.from(new Set([...prev.bookMarks, id]));
+      window.localStorage.setItem('book-mark', JSON.stringify(bookMarks));
+      return { ...prev, bookMarks };
+    });
   };
 
   useEffect(() => {
@@ -203,7 +192,7 @@ export const useSortable = (
       ...sortConfig,
       key: URLsort,
       direction: URLd,
-      bookMarks: bookMarkList,
+      bookMarks: Array.from(new Set(bookMarkList)),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -220,7 +209,3 @@ useSortable.defaultProps = {
     value: '',
   },
 };
-
-module.exports = useSortable;
-
-module.exports.default = useSortable;
