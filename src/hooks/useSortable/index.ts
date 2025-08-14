@@ -1,19 +1,31 @@
 import { useEffect, useMemo, useState } from 'react';
 import { validateInitialValue } from '../../helpers/validateInitialValue';
 
-type IUseSortable = {
-  items: Array<any>;
-  requestSort: (key: string, direction: string) => void;
-  requestSearch: (search: string, value: string) => void;
-  requestBookMark: (id: string | number) => void;
-};
+type CompareFn<T> = (field: T[keyof T], searchValue: any) => boolean;
 
-type Config = {
-  key: string;
-  direction: string;
+interface IUseSortable<T> {
+  items: T[];
+  requestSort: (
+    key: keyof T,
+    direction?: 'ascending' | 'descending',
+  ) => void;
+  requestSearch: (
+    search: keyof T,
+    value: any,
+    compareFn?: CompareFn<T>,
+  ) => void;
+  requestBookMark: (id: T[keyof T]) => void;
+}
+
+type Config<T> = {
+  key: keyof T | '';
+  direction: 'ascending' | 'descending' | '';
   bookMarks: Array<any>;
-  search: string;
-  value: string;
+  search: keyof T | '';
+  value: any;
+  compareFn?: CompareFn<T>;
+  disableUrlParams?: boolean;
+  disableLocalStorage?: boolean;
 };
 
 /**
@@ -81,77 +93,103 @@ type Config = {
  *      )
  *    }
  */
-export const useSortable = (
-  items: Array<any>,
-  config: Config = {
+export const useSortable = <T extends Record<string, any>>(
+  items: T[],
+  config: Config<T> = {
     bookMarks: [],
     key: '',
     direction: '',
     search: '',
     value: '',
   },
-): IUseSortable => {
-  const validatedInitialValue = validateInitialValue(items);
+): IUseSortable<T> => {
+  const validatedInitialValue = validateInitialValue<T>(items);
 
-  const [sortConfig, setSortConfig] = useState<Config>(config);
-  const bookMarkList = JSON.parse(window.localStorage.getItem('book-mark') || '[]');
+  const [sortConfig, setSortConfig] = useState<Config<T>>(config);
+  const isBrowser = typeof window !== 'undefined';
+  const bookMarkList =
+    isBrowser && !config.disableLocalStorage
+      ? JSON.parse(window.localStorage.getItem('book-mark') || '[]')
+      : [];
 
   const sortedItems = useMemo(() => {
     let sortableItems = [...validatedInitialValue];
-    if (sortConfig !== null && sortConfig.key !== null) {
+    if (sortConfig && sortConfig.key) {
       sortableItems.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
+        const aVal = a[sortConfig.key as keyof T];
+        const bVal = b[sortConfig.key as keyof T];
+        if (aVal < bVal) {
           return sortConfig.direction === 'ascending' ? -1 : 1;
         }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
+        if (aVal > bVal) {
           return sortConfig.direction === 'ascending' ? 1 : -1;
         }
         return 0;
       });
     }
-    if (sortConfig !== null && sortConfig.search && sortConfig.value) {
+    if (sortConfig && sortConfig.search && sortConfig.value !== undefined) {
+      const { search, value, compareFn } = sortConfig;
       sortableItems = sortableItems
         .filter((item) => {
-          return item[sortConfig.search]
-            .toLowerCase()
-            .includes(sortConfig.value.toLowerCase());
+          const field = item[search as keyof T];
+          if (compareFn) {
+            return compareFn(field, value);
+          }
+          if (typeof field === 'string') {
+            return field
+              .toLowerCase()
+              .includes(String(value).toLowerCase());
+          }
+          return field === value;
         })
         .sort((a, b) => {
-          if (
-            a[sortConfig.search]
-              .toLowerCase()
-              .indexOf(sortConfig.value.toLowerCase()) >
-            b[sortConfig.search]
-              .toLowerCase()
-              .indexOf(sortConfig.value.toLowerCase())
-          ) {
-            return 1;
-          } else if (
-            a[sortConfig.search]
-              .toLowerCase()
-              .indexOf(sortConfig.value.toLowerCase()) <
-            b[sortConfig.search]
-              .toLowerCase()
-              .indexOf(sortConfig.value.toLowerCase())
-          ) {
-            return -1;
-          } else {
-            if (a[sortConfig.search] > b[sortConfig.search]) return 1;
-            else return -1;
+          const aField = a[search as keyof T];
+          const bField = b[search as keyof T];
+          if (compareFn) {
+            const aMatch = compareFn(aField, value);
+            const bMatch = compareFn(bField, value);
+            if (aMatch === bMatch) {
+              if (aField > bField) return 1;
+              if (aField < bField) return -1;
+              return 0;
+            }
+            return aMatch ? -1 : 1;
           }
+          if (
+            typeof aField === 'string' &&
+            typeof bField === 'string'
+          ) {
+            const aIndex = aField
+              .toLowerCase()
+              .indexOf(String(value).toLowerCase());
+            const bIndex = bField
+              .toLowerCase()
+              .indexOf(String(value).toLowerCase());
+            if (aIndex > bIndex) return 1;
+            if (aIndex < bIndex) return -1;
+            return aField > bField ? 1 : -1;
+          }
+          if (aField > bField) return 1;
+          if (aField < bField) return -1;
+          return 0;
         });
     }
-    if (sortConfig.bookMarks) {
-      sortConfig.bookMarks.forEach((bookMark) => {
-        sortableItems.sort((x, y) => {
-          return x.id === bookMark ? -1 : y.id === bookMark ? 1 : 0;
-        });
+    if (sortConfig.bookMarks && sortConfig.bookMarks.length > 0) {
+      const bookMarkSet = new Set(sortConfig.bookMarks);
+      sortableItems.sort((x: any, y: any) => {
+        const xBook = bookMarkSet.has(x.id);
+        const yBook = bookMarkSet.has(y.id);
+        if (xBook === yBook) return 0;
+        return xBook ? -1 : 1;
       });
     }
     return sortableItems;
-  }, [items, sortConfig]);
+  }, [validatedInitialValue, sortConfig]);
 
-  const requestSort = (key: string, direction: string) => {
+  const requestSort = (
+    key: keyof T,
+    direction?: 'ascending' | 'descending',
+  ) => {
     if (
       sortConfig &&
       sortConfig.key === key &&
@@ -161,50 +199,64 @@ export const useSortable = (
     } else if (!direction) {
       direction = 'ascending';
     }
-    const params = new URLSearchParams(window.location.search);
-    params.set('sort', key.toString());
-    params.set('d', direction);
-    const URL =
-      params.toString().indexOf('null') > 0
-        ? `${window.location.pathname}`
-        : `${window.location.pathname}?${params.toString()}`;
-    window.history.replaceState({}, '', URL);
+    if (isBrowser && !sortConfig.disableUrlParams) {
+      const params = new URLSearchParams(window.location.search);
+      params.set('sort', key.toString());
+      params.set('d', direction as string);
+      const URL =
+        params.toString().indexOf('null') > 0
+          ? `${window.location.pathname}`
+          : `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState({}, '', URL);
+    }
     setSortConfig({
       ...sortConfig,
-      key: key.toString() && key.toString(),
-      direction,
+      key,
+      direction: direction!,
     });
   };
 
-  const requestSearch = (search: string, value: string) => {
+  const requestSearch = (
+    search: keyof T,
+    value: any,
+    compareFn?: CompareFn<T>,
+  ) => {
     setSortConfig({
       ...sortConfig,
-      search: search && search.toString(),
-      value: value && value.toString(),
+      search,
+      value,
+      compareFn,
     });
   };
 
-  const requestBookMark = (id: string | number) => {
+  const requestBookMark = (id: T[keyof T]) => {
     const bookMarks = sortConfig.bookMarks;
     const updatedBookMarks = [
-      ...bookMarks.filter((el) => el !== id), // Only add element if it doesn't already exist
-      ...(!bookMarks.includes(id) ? [id] : []), // Spread in id only if it doesn't already exist
+      ...bookMarks.filter((el) => el !== id),
+      ...(!bookMarks.includes(id) ? [id] : []),
     ];
     setSortConfig({ ...sortConfig, bookMarks: updatedBookMarks });
-    window.localStorage.setItem('book-mark', JSON.stringify(updatedBookMarks));
+    if (isBrowser && !sortConfig.disableLocalStorage) {
+      window.localStorage.setItem(
+        'book-mark',
+        JSON.stringify(updatedBookMarks),
+      );
+    }
   };
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const URLsort = params.get('sort') || '';
-    const URLd = params.get('d') || '';
-    requestSort(URLsort, URLd);
-    setSortConfig({
-      ...sortConfig,
-      key: URLsort,
-      direction: URLd,
-      bookMarks: bookMarkList,
-    });
+    if (isBrowser) {
+      const params = new URLSearchParams(window.location.search);
+      const URLsort = params.get('sort') || '';
+      const URLd = params.get('d') || '';
+      requestSort(URLsort as keyof T, URLd as any);
+      setSortConfig({
+        ...sortConfig,
+        key: URLsort as keyof T,
+        direction: URLd as any,
+        bookMarks: bookMarkList,
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -221,6 +273,4 @@ useSortable.defaultProps = {
   },
 };
 
-module.exports = useSortable;
-
-module.exports.default = useSortable;
+export default useSortable;

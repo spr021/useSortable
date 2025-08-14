@@ -59,7 +59,8 @@
       "js"
     ],
     "modulePathIgnorePatterns": [
-      "<rootDir>/dist/"
+      "<rootDir>/dist/",
+      "<rootDir>/hooks/"
     ]
   },
   "peerDependencies": {

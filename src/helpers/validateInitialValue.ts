@@ -12,23 +12,23 @@
  * @example
  *        const validatedInitialValue = validateInitialValue(initialValue);
  */
-export const validateInitialValue = (initialValue: any): Array<any> => {
+export const validateInitialValue = <T>(initialValue: any): Array<T> => {
   if (
     typeof initialValue === 'object' &&
     initialValue !== null &&
     !Array.isArray(initialValue)
   ) {
-    console.log(
-      'you have passed a object when a array is required. It still may work however. Please pass a array.',
+    console.warn(
+      'you have passed an object when an array is required. It still may work however. Please pass an array.',
     );
     initialValue = [...initialValue];
   }
   if (!Array.isArray(initialValue)) {
-    console.log(
-      'you really want to break the validation. Please pass a array as parameter. Defaulting to [].',
+    console.warn(
+      'you really want to break the validation. Please pass an array as parameter. Defaulting to [].',
     );
     initialValue = [];
   }
 
-  return initialValue;
+  return initialValue as Array<T>;
 };
