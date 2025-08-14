@@ -24,7 +24,17 @@ describe('useSortable tests', () => {
   });
 
   it('renders the hook correctly and checks types', () => {
-    const { result } = renderHook(() => useSortable([]));
+    const { result } = renderHook(() =>
+      useSortable<any>([], {
+        bookMarks: [],
+        key: '',
+        direction: '',
+        search: '',
+        value: '',
+        disableUrlParams: true,
+        disableLocalStorage: true,
+      }),
+    );
     expect(result.current.items).toStrictEqual([]);
     expect(Array.isArray(result.current.items)).toBe(true);
     expect(typeof result.current.requestSort).toBe('function');
@@ -33,7 +43,17 @@ describe('useSortable tests', () => {
   });
 
   it('should requestSort ascending by name from custom initial value', () => {
-    const { result } = renderHook(() => useSortable(myArray));
+    const { result } = renderHook(() =>
+      useSortable(myArray, {
+        bookMarks: [],
+        key: '',
+        direction: '',
+        search: '',
+        value: '',
+        disableUrlParams: true,
+        disableLocalStorage: true,
+      }),
+    );
     act(() => {
       result.current.requestSort('name', 'ascending');
     });
@@ -41,7 +61,17 @@ describe('useSortable tests', () => {
   });
 
   it('should requestSearch family by "Mi" value from custom initial value', () => {
-    const { result } = renderHook(() => useSortable(myArray));
+    const { result } = renderHook(() =>
+      useSortable(myArray, {
+        bookMarks: [],
+        key: '',
+        direction: '',
+        search: '',
+        value: '',
+        disableUrlParams: true,
+        disableLocalStorage: true,
+      }),
+    );
     act(() => {
       result.current.requestSearch('family', 'Mi');
     });
@@ -49,7 +79,17 @@ describe('useSortable tests', () => {
   });
 
   it('should requestBookMark item from custom initial value', () => {
-    const { result } = renderHook(() => useSortable(myArray));
+    const { result } = renderHook(() =>
+      useSortable(myArray, {
+        bookMarks: [],
+        key: '',
+        direction: '',
+        search: '',
+        value: '',
+        disableUrlParams: true,
+        disableLocalStorage: true,
+      }),
+    );
     act(() => {
       result.current.requestBookMark(2);
     });

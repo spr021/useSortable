@@ -58,9 +58,7 @@
       "js"
     ],
     "modulePathIgnorePatterns": [
-      "<rootDir>/dist/"
-    ],
-    "testPathIgnorePatterns": [
+      "<rootDir>/dist/",
       "<rootDir>/hooks/"
     ]
   },
