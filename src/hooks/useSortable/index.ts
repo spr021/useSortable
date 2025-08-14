@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { validateInitialValue } from '../../helpers/validateInitialValue';
 
 type CompareFn<T> = (field: T[keyof T], searchValue: any) => boolean;
+type SortCompareFn<T> = (a: T[keyof T], b: T[keyof T]) => number;
 
 interface IUseSortable<T> {
   items: T[];
   requestSort: (
     key: keyof T,
     direction?: 'ascending' | 'descending',
+    compareFn?: SortCompareFn<T>,
   ) => void;
   requestSearch: (
     search: keyof T,
@@ -24,8 +26,10 @@ type Config<T> = {
   search: keyof T | '';
   value: any;
   compareFn?: CompareFn<T>;
+  sortCompareFn?: SortCompareFn<T>;
   disableUrlParams?: boolean;
   disableLocalStorage?: boolean;
+  onBookmarksChange?: (bookMarks: Array<T[keyof T]>) => void;
 };
 
 /**
@@ -118,6 +122,10 @@ export const useSortable = <T extends Record<string, any>>(
       sortableItems.sort((a, b) => {
         const aVal = a[sortConfig.key as keyof T];
         const bVal = b[sortConfig.key as keyof T];
+        if (sortConfig.sortCompareFn) {
+          const res = sortConfig.sortCompareFn(aVal, bVal);
+          return sortConfig.direction === 'ascending' ? res : -res;
+        }
         if (aVal < bVal) {
           return sortConfig.direction === 'ascending' ? -1 : 1;
         }
@@ -189,6 +197,7 @@ export const useSortable = <T extends Record<string, any>>(
   const requestSort = (
     key: keyof T,
     direction?: 'ascending' | 'descending',
+    compareFn?: SortCompareFn<T>,
   ) => {
     if (
       sortConfig &&
@@ -213,6 +222,7 @@ export const useSortable = <T extends Record<string, any>>(
       ...sortConfig,
       key,
       direction: direction!,
+      sortCompareFn: compareFn,
     });
   };
 
@@ -235,7 +245,9 @@ export const useSortable = <T extends Record<string, any>>(
       ...bookMarks.filter((el) => el !== id),
       ...(!bookMarks.includes(id) ? [id] : []),
     ];
-    setSortConfig({ ...sortConfig, bookMarks: updatedBookMarks });
+    const newConfig = { ...sortConfig, bookMarks: updatedBookMarks };
+    setSortConfig(newConfig);
+    newConfig.onBookmarksChange?.(updatedBookMarks);
     if (isBrowser && !sortConfig.disableLocalStorage) {
       window.localStorage.setItem(
         'book-mark',
