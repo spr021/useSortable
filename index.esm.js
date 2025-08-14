@@ -1,6 +1,4 @@
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var react = require('react');
+import { useState, useMemo, useEffect } from 'react';
 
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation. All rights reserved.
@@ -138,9 +136,9 @@ var useSortable = function (items, config) {
         value: '',
     }; }
     var validatedInitialValue = validateInitialValue(items);
-    var _a = react.useState(config), sortConfig = _a[0], setSortConfig = _a[1];
+    var _a = useState(config), sortConfig = _a[0], setSortConfig = _a[1];
     var bookMarkList = JSON.parse(window.localStorage.getItem('book-mark') || '[]');
-    var sortedItems = react.useMemo(function () {
+    var sortedItems = useMemo(function () {
         var sortableItems = __spreadArrays(validatedInitialValue);
         if (sortConfig !== null && sortConfig.key !== null) {
             sortableItems.sort(function (a, b) {
@@ -222,7 +220,7 @@ var useSortable = function (items, config) {
             return __assign(__assign({}, prev), { bookMarks: bookMarks });
         });
     };
-    react.useEffect(function () {
+    useEffect(function () {
         var params = new URLSearchParams(window.location.search);
         var URLsort = params.get('sort') || '';
         var URLd = params.get('d') || '';
@@ -242,5 +240,5 @@ useSortable.defaultProps = {
     },
 };
 
-exports.useSortable = useSortable;
-//# sourceMappingURL=index.js.map
+export { useSortable };
+//# sourceMappingURL=index.esm.js.map
