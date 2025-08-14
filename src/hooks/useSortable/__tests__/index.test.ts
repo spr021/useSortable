@@ -116,7 +116,7 @@ describe('useSortable tests', () => {
     });
     expect(result.current.items).toHaveLength(1);
     act(() => {
-      result.current.requestSearch('', '');
+      result.current.requestSearch('' as any, '');
     });
     expect(result.current.items).toStrictEqual(myArray);
   });
@@ -133,6 +133,45 @@ describe('useSortable tests', () => {
       result.current.requestBookMark(2);
       result.current.requestBookMark(3);
     });
-    expect(result.current.items.map((i) => i.id)).toStrictEqual([2, 3, 1]);
+    expect(result.current.items.map((i) => i.id)).toStrictEqual([3, 1, 2]);
+  });
+
+  it('allows custom comparator in requestSort', () => {
+    const array = [
+      { id: 1, name: 'b' },
+      { id: 2, name: 'a' },
+      { id: 3, name: 'c' },
+    ];
+    const { result } = renderHook(() => useSortable(array));
+    act(() => {
+      result.current.requestSort('name', 'ascending', (a, b) =>
+        String(b).localeCompare(String(a)),
+      );
+    });
+    expect(result.current.items.map((i) => i.name)).toStrictEqual([
+      'c',
+      'b',
+      'a',
+    ]);
+  });
+
+  it('triggers onBookmarksChange when bookmarks update', () => {
+    const onChange = jest.fn();
+    const { result } = renderHook(() =>
+      useSortable(myArray, {
+        bookMarks: [],
+        key: '',
+        direction: '',
+        search: '',
+        value: '',
+        disableUrlParams: true,
+        disableLocalStorage: true,
+        onBookmarksChange: onChange,
+      }),
+    );
+    act(() => {
+      result.current.requestBookMark(1);
+    });
+    expect(onChange).toHaveBeenCalledWith([1]);
   });
 });

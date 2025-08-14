@@ -122,9 +122,19 @@ export default Table
 
 | Key     |    Type    | Description                                                                                |
 | ------- | :--------: | ------------------------------------------------------------------------------------------ |
-| requestSort     | `function` | Assign a new value to `items` sorted by `key` and `direction`.                                                           |
+| requestSort     | `function` | Assign a new value to `items` sorted by `key` and `direction`. Supports an optional comparator. |
 | requestSearch   | `function` | Assign a new value to `items` searched by `search` and `value`.                    |
 | requestBookMark    | `function` | BookMark item and set it to of `items` array |
+
+### Config
+
+The second argument of `useSortable` accepts an optional configuration object:
+
+| Key | Type | Description |
+| --- | :--: | ----------- |
+| disableUrlParams | `boolean` | Disable URL parameter synchronization. |
+| disableLocalStorage | `boolean` | Disable bookmark persistence in `localStorage`. |
+| onBookmarksChange | `function` | Callback fired whenever the bookmark list changes. |
 
 ## Related repo
 
