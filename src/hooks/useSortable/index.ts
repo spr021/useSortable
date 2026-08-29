@@ -1,288 +1,439 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import {
+  isEmptyFilterValue,
+  normalizeSorts,
+  NormalizedSortDescriptor,
+  prioritizeBookmarks,
+  processItems,
+} from '../../core';
 import { validateInitialValue } from '../../helpers/validateInitialValue';
+import {
+  FilterCompareFn,
+  FilterDescriptor,
+  SortableConfig,
+  SortCompareFn,
+  SortDescriptor,
+  SortDirection,
+  UseSortableResult,
+} from '../../types';
 
-type CompareFn<T> = (field: T[keyof T], searchValue: any) => boolean;
-type SortCompareFn<T> = (a: T[keyof T], b: T[keyof T]) => number;
-
-interface IUseSortable<T> {
-  items: T[];
-  requestSort: (
-    key: keyof T,
-    direction?: 'ascending' | 'descending',
-    compareFn?: SortCompareFn<T>,
-  ) => void;
-  requestSearch: (
-    search: keyof T,
-    value: any,
-    compareFn?: CompareFn<T>,
-  ) => void;
-  requestBookMark: (id: T[keyof T]) => void;
+interface SortableState<T> {
+  sorts: Array<NormalizedSortDescriptor<T>>;
+  filters: Array<FilterDescriptor<T>>;
+  bookmarks: unknown[];
 }
 
-type Config<T> = {
-  key: keyof T | '';
-  direction: 'ascending' | 'descending' | '';
-  bookMarks: Array<any>;
-  search: keyof T | '';
-  value: any;
-  compareFn?: CompareFn<T>;
-  sortCompareFn?: SortCompareFn<T>;
-  disableUrlParams?: boolean;
-  disableLocalStorage?: boolean;
-  onBookmarksChange?: (bookMarks: Array<T[keyof T]>) => void;
+const DEFAULT_STORAGE_KEY = 'book-mark';
+const DEFAULT_SORT_PARAM = 'sort';
+const DEFAULT_DIRECTION_PARAM = 'd';
+
+const isDirection = (value: string | null): value is SortDirection =>
+  value === 'ascending' || value === 'descending';
+
+const initialStateFromConfig = <T extends object>(
+  config: SortableConfig<T>,
+): SortableState<T> => {
+  const hasLegacySortKey = config.key !== undefined && config.key !== '';
+  const hasLegacySearchKey = config.search !== undefined && config.search !== '';
+  const legacySorts: Array<SortDescriptor<T>> = hasLegacySortKey
+    ? [
+        {
+          key: config.key as keyof T,
+          direction: config.direction || 'ascending',
+          compareFn: config.sortCompareFn,
+        },
+      ]
+    : [];
+  const legacyFilters: Array<FilterDescriptor<T>> =
+    hasLegacySearchKey && !isEmptyFilterValue(config.value)
+      ? [
+          {
+            key: config.search as keyof T,
+            value: config.value,
+            compareFn: config.compareFn,
+          },
+        ]
+      : [];
+
+  return {
+    sorts: normalizeSorts(config.sorts || legacySorts),
+    filters: (config.filters || legacyFilters).slice(),
+    bookmarks: (config.bookmarks || config.bookMarks || []).slice(),
+  };
+};
+
+const sameBookmarks = (
+  left: ReadonlyArray<unknown>,
+  right: ReadonlyArray<unknown>,
+): boolean =>
+  left.length === right.length &&
+  left.every((value, index) => Object.is(value, right[index]));
+
+const readStoredBookmarks = (storageKey: string): unknown[] | undefined => {
+  try {
+    const rawValue = window.localStorage.getItem(storageKey);
+    if (rawValue === null) return undefined;
+    const parsed: unknown = JSON.parse(rawValue);
+    return Array.isArray(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
 };
 
 /**
- * Classic sort & search example to help understand the flow of this npm package
- *
- * @param    {Array} initialValue
- *           initial sort & search value
- *
- * @param    {Config} config
- *           initial config for sort & search in initialValue
- *
- * @return   {Array}
- *           array with sort & search and methods
- *
- * @property {Array} items
- *           The current array that sort & search
- *
- * @property {(key: string | number, direction: string) => void} requestSort
- *           the request for Sort function that get what Key you want to sort and direction
- *           direction can be "ascending" or "descending"
- *           defult value of direction is "ascending"
- *
- * @property {(search: string | number, value: string | number) => void} requestSearch
- *           the request for Search function that get Search for what Key you want search and value
- *
- * @property {(id: string | number) => void} requestBookMark
- *           the request for BookMark function that get what Id you want to book mark and set top of you array
- *
- * @example
- *   const ExampleComponent = () => {
- *     const myArray = [{
- *        id: 1,
- *        name: "Saber",
- *        family: "Pourrahimi"
- *        ...
- *     },
- *     {
- *        id: 2,
- *        name: "Maryam",
- *        family: "Mirzayee"
- *        ...
- *     }]
- *     const { items, requestSort, requestSearch, requestBookMark } = useSortable(myArray);
- *
- *     return (
- *       <>
- *         <table>
- *           <tr>
- *             <td>Id</td>
- *             <td>Name</td>
- *             <td>Family</td>
- *           </tr>
- *           {items.map(el => (
- *              <tr onClick={() => requestBookMark(el.id)}>
- *                <td>{el.id}</td>
- *                <td>{el.name}</td>
- *                <td>{el.family}</td>
- *              </tr>
- *           ))}
- *         </table>
- *         <button onClick={() => requestSort("name", "ascending")}>Sort ascending myArray by name</button>
- *         <input onChange={(e) => requestSearch("name", e.target.value)}>Search name in myArray</button>
- *         <input onChange={(e) => requestSearch("family", e.target.value)}>Search family in myArray</button>
- *       </>
- *      )
- *    }
+ * Sorts, filters, and prioritizes bookmarked data without mutating the input array.
  */
-export const useSortable = <T extends Record<string, any>>(
-  items: T[],
-  config: Config<T> = {
-    bookMarks: [],
-    key: '',
-    direction: '',
-    search: '',
-    value: '',
-  },
-): IUseSortable<T> => {
-  const validatedInitialValue = validateInitialValue<T>(items);
+export const useSortable = <T extends object>(
+  items: ReadonlyArray<T>,
+  config: SortableConfig<T> = {},
+): UseSortableResult<T> => {
+  const [initialState] = useState<SortableState<T>>(() =>
+    initialStateFromConfig(config),
+  );
+  const [state, setState] = useState<SortableState<T>>(initialState);
+  const mountedRef = useRef(false);
+  const skipFirstPersistenceRef = useRef(true);
+  const notifyBookmarksRef = useRef(false);
 
-  const [sortConfig, setSortConfig] = useState<Config<T>>(config);
-  const isBrowser = typeof window !== 'undefined';
-  const bookMarkList =
-    isBrowser && !config.disableLocalStorage
-      ? JSON.parse(window.localStorage.getItem('book-mark') || '[]')
-      : [];
+  const storageKey = config.storageKey || DEFAULT_STORAGE_KEY;
+  const sortParam = config.sortParam || DEFAULT_SORT_PARAM;
+  const directionParam = config.directionParam || DEFAULT_DIRECTION_PARAM;
+  const filterMode = config.filterMode || 'all';
+  const disableLocalStorage = Boolean(config.disableLocalStorage);
+  const disableUrlParams = Boolean(config.disableUrlParams);
+  const onBookmarksChange = config.onBookmarksChange;
+  const configuredGetItemId = config.getItemId;
+  const bookmarkKey = config.bookmarkKey;
 
-  const sortedItems = useMemo(() => {
-    let sortableItems = [...validatedInitialValue];
-    if (sortConfig && sortConfig.key) {
-      sortableItems.sort((a, b) => {
-        const aVal = a[sortConfig.key as keyof T];
-        const bVal = b[sortConfig.key as keyof T];
-        if (sortConfig.sortCompareFn) {
-          const res = sortConfig.sortCompareFn(aVal, bVal);
-          return sortConfig.direction === 'ascending' ? res : -res;
-        }
-        if (aVal < bVal) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (aVal > bVal) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    if (sortConfig && sortConfig.search && sortConfig.value !== undefined) {
-      const { search, value, compareFn } = sortConfig;
-      sortableItems = sortableItems
-        .filter((item) => {
-          const field = item[search as keyof T];
-          if (compareFn) {
-            return compareFn(field, value);
-          }
-          if (typeof field === 'string') {
-            return field
-              .toLowerCase()
-              .includes(String(value).toLowerCase());
-          }
-          return field === value;
-        })
-        .sort((a, b) => {
-          const aField = a[search as keyof T];
-          const bField = b[search as keyof T];
-          if (compareFn) {
-            const aMatch = compareFn(aField, value);
-            const bMatch = compareFn(bField, value);
-            if (aMatch === bMatch) {
-              if (aField > bField) return 1;
-              if (aField < bField) return -1;
-              return 0;
-            }
-            return aMatch ? -1 : 1;
-          }
-          if (
-            typeof aField === 'string' &&
-            typeof bField === 'string'
-          ) {
-            const aIndex = aField
-              .toLowerCase()
-              .indexOf(String(value).toLowerCase());
-            const bIndex = bField
-              .toLowerCase()
-              .indexOf(String(value).toLowerCase());
-            if (aIndex > bIndex) return 1;
-            if (aIndex < bIndex) return -1;
-            return aField > bField ? 1 : -1;
-          }
-          if (aField > bField) return 1;
-          if (aField < bField) return -1;
-          return 0;
-        });
-    }
-    if (sortConfig.bookMarks && sortConfig.bookMarks.length > 0) {
-      const bookMarkSet = new Set(sortConfig.bookMarks);
-      sortableItems.sort((x: any, y: any) => {
-        const xBook = bookMarkSet.has(x.id);
-        const yBook = bookMarkSet.has(y.id);
-        if (xBook === yBook) return 0;
-        return xBook ? -1 : 1;
-      });
-    }
-    return sortableItems;
-  }, [validatedInitialValue, sortConfig]);
+  const getItemId = useCallback(
+    (item: T): unknown => {
+      if (configuredGetItemId) return configuredGetItemId(item);
+      return item[(bookmarkKey ?? ('id' as keyof T)) as keyof T];
+    },
+    [bookmarkKey, configuredGetItemId],
+  );
 
-  const requestSort = (
-    key: keyof T,
-    direction?: 'ascending' | 'descending',
-    compareFn?: SortCompareFn<T>,
-  ) => {
-    if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === 'ascending'
-    ) {
-      direction = 'descending';
-    } else if (!direction) {
-      direction = 'ascending';
-    }
-    if (isBrowser && !sortConfig.disableUrlParams) {
-      const params = new URLSearchParams(window.location.search);
-      params.set('sort', key.toString());
-      params.set('d', direction as string);
-      const URL =
-        params.toString().indexOf('null') > 0
-          ? `${window.location.pathname}`
-          : `${window.location.pathname}?${params.toString()}`;
-      window.history.replaceState({}, '', URL);
-    }
-    setSortConfig({
-      ...sortConfig,
-      key,
-      direction: direction!,
-      sortCompareFn: compareFn,
-    });
-  };
+  const validatedItems = useMemo(
+    () => validateInitialValue<T>(items),
+    [items],
+  );
 
-  const requestSearch = (
-    search: keyof T,
-    value: any,
-    compareFn?: CompareFn<T>,
-  ) => {
-    setSortConfig({
-      ...sortConfig,
-      search,
-      value,
-      compareFn,
-    });
-  };
+  const filteredAndSortedItems = useMemo(
+    () =>
+      processItems(
+        validatedItems,
+        {
+          sorts: state.sorts,
+          filters: state.filters,
+          filterMode,
+          getItemId,
+        },
+      ),
+    [filterMode, getItemId, state.filters, state.sorts, validatedItems],
+  );
 
-  const requestBookMark = (id: T[keyof T]) => {
-    const bookMarks = sortConfig.bookMarks;
-    const updatedBookMarks = [
-      ...bookMarks.filter((el) => el !== id),
-      ...(!bookMarks.includes(id) ? [id] : []),
-    ];
-    const newConfig = { ...sortConfig, bookMarks: updatedBookMarks };
-    setSortConfig(newConfig);
-    newConfig.onBookmarksChange?.(updatedBookMarks);
-    if (isBrowser && !sortConfig.disableLocalStorage) {
-      window.localStorage.setItem(
-        'book-mark',
-        JSON.stringify(updatedBookMarks),
-      );
-    }
-  };
+  const sortedItems = useMemo(
+    () =>
+      state.bookmarks.length > 0
+        ? prioritizeBookmarks(filteredAndSortedItems, state.bookmarks, getItemId)
+        : filteredAndSortedItems,
+    [filteredAndSortedItems, getItemId, state.bookmarks],
+  );
 
   useEffect(() => {
-    if (isBrowser) {
-      const params = new URLSearchParams(window.location.search);
-      const URLsort = params.get('sort') || '';
-      const URLd = params.get('d') || '';
-      requestSort(URLsort as keyof T, URLd as any);
-      setSortConfig({
-        ...sortConfig,
-        key: URLsort as keyof T,
-        direction: URLd as any,
-        bookMarks: bookMarkList,
-      });
-    }
+    mountedRef.current = true;
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const urlKey = disableUrlParams ? null : params.get(sortParam);
+    const urlDirection = disableUrlParams ? null : params.get(directionParam);
+    const storedBookmarks = disableLocalStorage
+      ? undefined
+      : readStoredBookmarks(storageKey);
+
+    // Browser-backed state cannot be read during SSR; hydrate it after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setState((previous) => {
+      const nextSorts = urlKey
+        ? normalizeSorts<T>([
+            {
+              key: urlKey as keyof T,
+              direction: isDirection(urlDirection) ? urlDirection : 'ascending',
+            },
+          ])
+        : previous.sorts;
+      const nextBookmarks = storedBookmarks || previous.bookmarks;
+      if (
+        nextSorts === previous.sorts &&
+        sameBookmarks(nextBookmarks, previous.bookmarks)
+      ) {
+        return previous;
+      }
+      return { ...previous, sorts: nextSorts, bookmarks: nextBookmarks };
+    });
+    // Browser state is intentionally hydrated only once after mount for SSR safety.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { items: sortedItems, requestSort, requestSearch, requestBookMark };
-};
+  useEffect(() => {
+    if (!notifyBookmarksRef.current) return;
+    notifyBookmarksRef.current = false;
+    onBookmarksChange?.(state.bookmarks);
+  }, [onBookmarksChange, state.bookmarks]);
 
-useSortable.defaultProps = {
-  config: {
-    bookMarks: [],
-    key: '',
-    direction: '',
-    search: '',
-    value: '',
-  },
+  useEffect(() => {
+    if (!mountedRef.current || typeof window === 'undefined') return;
+    if (skipFirstPersistenceRef.current) {
+      skipFirstPersistenceRef.current = false;
+      return;
+    }
+
+    if (!disableLocalStorage) {
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(state.bookmarks));
+      } catch {
+        // Persistence is optional; unavailable or full storage must not break rendering.
+      }
+    }
+
+    if (!disableUrlParams) {
+      const params = new URLSearchParams(window.location.search);
+      const primarySort = state.sorts[0];
+      if (primarySort) {
+        params.set(sortParam, String(primarySort.key));
+        params.set(directionParam, primarySort.direction);
+      } else {
+        params.delete(sortParam);
+        params.delete(directionParam);
+      }
+      const search = params.toString();
+      const nextUrl = `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`;
+      const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      if (nextUrl !== currentUrl) {
+        window.history.replaceState(window.history.state, '', nextUrl);
+      }
+    }
+  }, [
+    directionParam,
+    disableLocalStorage,
+    disableUrlParams,
+    sortParam,
+    state.bookmarks,
+    state.sorts,
+    storageKey,
+  ]);
+
+  useEffect(() => {
+    if (disableLocalStorage || typeof window === 'undefined') return undefined;
+
+    const handleStorage = (event: StorageEvent): void => {
+      if (event.storageArea !== window.localStorage || event.key !== storageKey) return;
+      try {
+        const parsed: unknown = event.newValue === null ? [] : JSON.parse(event.newValue);
+        if (Array.isArray(parsed)) {
+          setState((previous) => ({ ...previous, bookmarks: parsed }));
+        }
+      } catch {
+        // Ignore malformed values written by another tab.
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [disableLocalStorage, storageKey]);
+
+  const requestSort = useCallback(
+    <K extends keyof T>(
+      key: K,
+      direction?: SortDirection,
+      compareFn?: SortCompareFn<T, K>,
+    ): void => {
+      setState((previous) => {
+        const current = previous.sorts.length === 1 ? previous.sorts[0] : undefined;
+        const nextDirection =
+          direction ||
+          (current?.key === key && current.direction === 'ascending'
+            ? 'descending'
+            : 'ascending');
+        return {
+          ...previous,
+          sorts: normalizeSorts([
+            {
+              key,
+              direction: nextDirection,
+              compareFn: compareFn as SortCompareFn<T>,
+            },
+          ]),
+        };
+      });
+    },
+    [],
+  );
+
+  const requestMultiSort = useCallback(
+    <K extends keyof T>(
+      key: K,
+      direction?: SortDirection,
+      compareFn?: SortCompareFn<T, K>,
+    ): void => {
+      setState((previous) => {
+        const existingIndex = previous.sorts.findIndex((sort) => sort.key === key);
+        const existing = previous.sorts[existingIndex];
+        const nextDirection =
+          direction ||
+          (existing?.direction === 'ascending' ? 'descending' : 'ascending');
+        const nextSort = normalizeSorts([
+          {
+            key,
+            direction: nextDirection,
+            compareFn: compareFn as SortCompareFn<T>,
+          },
+        ])[0];
+        const sorts = previous.sorts.slice();
+        if (existingIndex === -1) sorts.push(nextSort);
+        else sorts[existingIndex] = nextSort;
+        return { ...previous, sorts };
+      });
+    },
+    [],
+  );
+
+  const setSorts = useCallback((sorts: ReadonlyArray<SortDescriptor<T>>): void => {
+    setState((previous) => ({ ...previous, sorts: normalizeSorts(sorts) }));
+  }, []);
+
+  const clearSort = useCallback((key?: keyof T): void => {
+    setState((previous) => ({
+      ...previous,
+      sorts:
+        key !== undefined
+          ? previous.sorts.filter((sort) => sort.key !== key)
+          : [],
+    }));
+  }, []);
+
+  const getSortDirection = useCallback(
+    (key: keyof T): SortDirection | undefined =>
+      state.sorts.find((sort) => sort.key === key)?.direction,
+    [state.sorts],
+  );
+
+  const requestSearch = useCallback(
+    <K extends keyof T>(
+      key: K,
+      value: unknown,
+      compareFn?: FilterCompareFn<T, K>,
+    ): void => {
+      setState((previous) => ({
+        ...previous,
+        filters: isEmptyFilterValue(value)
+          ? []
+          : [
+              {
+                key,
+                value,
+                compareFn: compareFn as FilterCompareFn<T>,
+              },
+            ],
+      }));
+    },
+    [],
+  );
+
+  const requestFilter = useCallback(
+    <K extends keyof T>(
+      key: K,
+      value: unknown,
+      compareFn?: FilterCompareFn<T, K>,
+    ): void => {
+      setState((previous) => {
+        const withoutKey = previous.filters.filter((filter) => filter.key !== key);
+        return {
+          ...previous,
+          filters: isEmptyFilterValue(value)
+            ? withoutKey
+            : withoutKey.concat({
+                key,
+                value,
+                compareFn: compareFn as FilterCompareFn<T>,
+              }),
+        };
+      });
+    },
+    [],
+  );
+
+  const setFilters = useCallback(
+    (filters: ReadonlyArray<FilterDescriptor<T>>): void => {
+      setState((previous) => ({ ...previous, filters: filters.slice() }));
+    },
+    [],
+  );
+
+  const clearSearch = useCallback((key?: keyof T): void => {
+    setState((previous) => ({
+      ...previous,
+      filters:
+        key !== undefined
+          ? previous.filters.filter((filter) => filter.key !== key)
+          : [],
+    }));
+  }, []);
+
+  const requestBookMark = useCallback((id: unknown): void => {
+    notifyBookmarksRef.current = true;
+    setState((previous) => {
+      const hasBookmark = previous.bookmarks.some((bookmark) => Object.is(bookmark, id));
+      return {
+        ...previous,
+        bookmarks: hasBookmark
+          ? previous.bookmarks.filter((bookmark) => !Object.is(bookmark, id))
+          : previous.bookmarks.concat(id),
+      };
+    });
+  }, []);
+
+  const clearBookmarks = useCallback((): void => {
+    notifyBookmarksRef.current = true;
+    setState((previous) => ({ ...previous, bookmarks: [] }));
+  }, []);
+
+  const isBookmarked = useCallback(
+    (id: unknown): boolean =>
+      state.bookmarks.some((bookmark) => Object.is(bookmark, id)),
+    [state.bookmarks],
+  );
+
+  const reset = useCallback((): void => {
+    notifyBookmarksRef.current = true;
+    setState({
+      sorts: initialState.sorts.slice(),
+      filters: initialState.filters.slice(),
+      bookmarks: initialState.bookmarks.slice(),
+    });
+  }, [initialState]);
+
+  return {
+    items: sortedItems,
+    sorts: state.sorts,
+    filters: state.filters,
+    bookMarks: state.bookmarks,
+    bookmarks: state.bookmarks,
+    requestSort,
+    requestMultiSort,
+    setSorts,
+    clearSort,
+    getSortDirection,
+    requestSearch,
+    requestFilter,
+    setFilters,
+    clearSearch,
+    requestBookMark,
+    toggleBookmark: requestBookMark,
+    clearBookmarks,
+    isBookmarked,
+    reset,
+  };
 };
 
 export default useSortable;
