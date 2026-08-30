@@ -223,6 +223,7 @@ npm run build
 ## Interactive showcase
 
 Try the live [Sort Lab showcase](https://use-sortable-sort-lab.saber021.chatgpt.site),
+open the public [GitHub Pages release](https://spr021.github.io/useSortable/),
 or run the same application locally from this repository.
 
 The standalone [Sort Lab example](./example) imports this repository through a

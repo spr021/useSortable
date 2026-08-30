@@ -7,6 +7,8 @@ library package rather than copying its logic.
 The page also includes an installation guide, workflow recipes, returned API
 reference, configuration table, and pure-helper examples.
 
+Public release: <https://spr021.github.io/useSortable/>
+
 ## Run locally
 
 Build the library once, then start the showcase:
