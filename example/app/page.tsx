@@ -27,6 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { DocsSection } from './docs-section';
 
 type Status = 'Active' | 'Planning' | 'Paused';
 
@@ -180,15 +181,25 @@ export default function Home() {
               <p className="text-xs text-white/55">Interactive library showcase</p>
             </div>
           </div>
-          <a
-            className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs font-medium text-white/80 transition hover:border-white/30 hover:bg-white/8 hover:text-white"
-            href="https://github.com/spr021/useSortable"
-            rel="noreferrer"
-            target="_blank"
-          >
-            <ExternalLink className="size-4" aria-hidden="true" />
-            View source
-          </a>
+          <div className="flex items-center gap-2">
+            <nav aria-label="Primary navigation" className="hidden items-center gap-1 sm:flex">
+              <a className="rounded-lg px-3 py-2 text-xs font-medium text-white/65 transition hover:bg-white/8 hover:text-white" href="#playground">
+                Playground
+              </a>
+              <a className="rounded-lg px-3 py-2 text-xs font-medium text-white/65 transition hover:bg-white/8 hover:text-white" href="#docs">
+                Documentation
+              </a>
+            </nav>
+            <a
+              className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs font-medium text-white/80 transition hover:border-white/30 hover:bg-white/8 hover:text-white"
+              href="https://github.com/spr021/useSortable"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <ExternalLink className="size-4" aria-hidden="true" />
+              View source
+            </a>
+          </div>
         </div>
       </header>
 
@@ -223,7 +234,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-3xl border bg-card shadow-[0_20px_60px_rgb(24_47_36/8%)]">
+        <section className="scroll-mt-6 overflow-hidden rounded-3xl border bg-card shadow-[0_20px_60px_rgb(24_47_36/8%)]" id="playground">
           <div className="border-b bg-[#fbfcf7] p-4 sm:p-5">
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(260px,1.4fr)_repeat(3,minmax(145px,.65fr))_auto]">
               <label className="relative block">
@@ -301,7 +312,7 @@ export default function Home() {
             </div>
           </div>
 
-          <Table>
+          <Table aria-label="Project results">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-12 pl-5"><span className="sr-only">Bookmark</span></TableHead>
@@ -382,6 +393,8 @@ export default function Home() {
 requestFilter('status', 'Active')
 requestSort('score', 'descending')`}</code></pre>
         </section>
+
+        <DocsSection />
       </div>
     </main>
   );

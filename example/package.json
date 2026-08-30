@@ -8,9 +8,12 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
+    "pages:build": "vite build --config vite.pages.config.ts",
+    "pages:preview": "vite preview --config vite.pages.config.ts",
     "start": "wrangler dev --config dist/server/wrangler.json",
-    "lint": "oxlint app",
+    "lint": "oxlint app static-site vite.pages.config.ts",
     "test": "vitest run",
+    "typecheck": "tsc --noEmit",
     "format": "oxfmt"
   },
   "dependencies": {

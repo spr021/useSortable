@@ -4,6 +4,9 @@ An interactive example application for `use-sortable`. It consumes the parent
 repository through `"use-sortable": "file:.."`, so the table exercises the real
 library package rather than copying its logic.
 
+The page also includes an installation guide, workflow recipes, returned API
+reference, configuration table, and pure-helper examples.
+
 ## Run locally
 
 Build the library once, then start the showcase:
@@ -31,6 +34,8 @@ Open `http://localhost:3000`.
 
 ```sh
 npm run lint
+npm run typecheck
 npm test
 npm run build
+npm run pages:build
 ```

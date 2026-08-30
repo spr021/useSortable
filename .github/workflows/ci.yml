@@ -46,5 +46,7 @@ jobs:
       - run: npm run build
       - run: npm ci --prefix example
       - run: npm run lint --prefix example
+      - run: npm run typecheck --prefix example
       - run: npm test --prefix example
       - run: npm run build --prefix example
+      - run: npm run pages:build --prefix example

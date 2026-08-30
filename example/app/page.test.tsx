@@ -4,6 +4,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import Home from './page';
 
+const getProjectRows = () =>
+  within(screen.getByRole('table', { name: 'Project results' })).getAllByRole('row');
+
 describe('Sort Lab showcase', () => {
   afterEach(cleanup);
 
@@ -23,7 +26,7 @@ describe('Sort Lab showcase', () => {
     await user.selectOptions(screen.getByLabelText('Filter by status'), 'Active');
     await user.selectOptions(screen.getByLabelText('Filter by minimum score'), '90');
 
-    expect(screen.getAllByRole('row')).toHaveLength(5);
+    expect(getProjectRows()).toHaveLength(5);
     expect(screen.getByText('Northstar AI')).toBeInTheDocument();
     expect(screen.queryByText('Signal studio')).not.toBeInTheDocument();
   });
@@ -34,13 +37,13 @@ describe('Sort Lab showcase', () => {
 
     const scoreSort = screen.getByRole('button', { name: /^Score/ });
     await user.click(scoreSort);
-    expect(within(screen.getAllByRole('row')[1]).getByText('Orbit billing')).toBeInTheDocument();
+    expect(within(getProjectRows()[1]).getByText('Orbit billing')).toBeInTheDocument();
 
     await user.click(scoreSort);
-    expect(within(screen.getAllByRole('row')[1]).getByText('Prism metrics')).toBeInTheDocument();
+    expect(within(getProjectRows()[1]).getByText('Prism metrics')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Priority' }));
-    expect(within(screen.getAllByRole('row')[1]).getByText('Prism metrics')).toBeInTheDocument();
+    expect(within(getProjectRows()[1]).getByText('Prism metrics')).toBeInTheDocument();
     expect(screen.getByText('sort: status ↑ · score ↓')).toBeInTheDocument();
   });
 
@@ -57,7 +60,17 @@ describe('Sort Lab showcase', () => {
 
     await user.selectOptions(screen.getByLabelText('Filter by category'), 'Research');
     await user.click(screen.getByRole('button', { name: 'Reset view' }));
-    expect(screen.getAllByRole('row')).toHaveLength(11);
+    expect(getProjectRows()).toHaveLength(11);
     expect(screen.getByLabelText('Filter by category')).toHaveValue('');
+  });
+
+  it('renders the installation guide and API documentation', () => {
+    render(<Home />);
+
+    expect(screen.getByRole('heading', { name: 'From raw array to useful view in minutes.' })).toBeInTheDocument();
+    expect(screen.getByText('npm install use-sortable')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Returned API' })).toBeInTheDocument();
+    expect(screen.getByText('requestMultiSort')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Use the pure helpers' })).toBeInTheDocument();
   });
 });
